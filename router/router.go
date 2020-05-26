@@ -72,6 +72,7 @@ func (rt *AppRouter) Handle(method, path string, h AppHandle) {
 	rt.trees[method][path] = h
 }
 
+// Usage: rt.FileServe("/js/lib/:name", http.Dir("static"))
 func (rt *AppRouter) FileServe(path string, fs http.FileSystem) {
 	rt.fileRoot = fs
 	rt.trees["GET"][path] = serveFile
