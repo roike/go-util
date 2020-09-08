@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"strings"
 )
 
@@ -145,9 +144,11 @@ func (rt *AppRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (rt *AppRouter) getHandle(r *http.Request) (handler interface{}, p Param, err error) {
 	url := r.URL.Path
 	path := url
-	matched, err := regexp.MatchString(`/api/.*`, url)
-	if matched == true {
-		path = url[len(rt.root):]
+	if len(rt.root) > 1 {
+		matched := strings.HasPrefix(url, rt.root)
+		if matched == true {
+			path = url[len(rt.root):]
+		}
 	}
 
 	if rt.Wrapper != nil {
