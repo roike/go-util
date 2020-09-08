@@ -67,3 +67,75 @@ func TestFileHandle(t *testing.T) {
 	}
 	t.Logf("StatusCode is %v, body is %v", resp.StatusCode, string(body))
 }
+
+func TestSubpathHandle(t *testing.T) {
+	t.Logf("Routes for api resource")
+	routed := false
+	var writerHandle AppHandle = func(w io.Writer, r *http.Request, ps Param) error {
+		routed = true
+		want := Param{"entry": "thirdpen", "tag": "euler", "offset": "0"}
+		if !reflect.DeepEqual(ps, want) {
+			t.Fatalf("wrong wildcard values: want %v, got %v", want, ps)
+		}
+		io.WriteString(w, "<html><body>Hello World!</body></html>")
+		return nil
+	}
+	router := New("/api")
+	router.Handle("GET", "/latest/:entry/:tag/:offset", writerHandle)
+
+	req := httptest.NewRequest("GET", "/api/latest/thirdpen/euler/0", nil)
+
+	h, _, err := router.getHandle(req)
+	if err != nil {
+		t.Fatalf("Error %v", err)
+	}
+	if _, ok := h.(AppHandle); !ok {
+		t.Fatal("Handle type is invalid.")
+	}
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+	t.Logf("StatusCode is %v, body is %v", resp.StatusCode, string(body))
+	if !routed {
+		t.Fatal("routing failed")
+	}
+}
+
+func wrapperHandle(r *http.Request, urlPath string) (string, error) {
+	if urlPath == "/latest" {
+		return urlPath, nil
+	} else {
+		return "", AppErrorf(http.StatusNotFound, urlPath)
+	}
+}
+
+func TestWrapperHandle(t *testing.T) {
+	t.Logf("Routes for api resource")
+	routed := false
+
+
+	var writerHandle AppHandle = func(w io.Writer, r *http.Request, ps Param) error {
+		routed = true
+		io.WriteString(w, "<html><body>Hello World!</body></html>")
+		return nil
+	}
+	router := New("/api")
+	router.Handle("GET", "/latest", writerHandle)
+	router.Wrapper = wrapperHandle
+
+	req := httptest.NewRequest("GET", "/latest", nil)
+
+	_, _, err := router.getHandle(req)
+	if err != nil {
+		t.Fatalf("Error %v", err)
+	}
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	resp := w.Result()
+	body, _ := ioutil.ReadAll(resp.Body)
+	t.Logf("StatusCode is %v, body is %v", resp.StatusCode, string(body))
+	if !routed {
+		t.Fatal("routing failed")
+	}
+}
