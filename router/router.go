@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 )
 
@@ -143,10 +144,9 @@ func (rt *AppRouter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // requestパスに対応する関数の仕分け、requestパスのワイルドカードに対応
 func (rt *AppRouter) getHandle(r *http.Request) (handler interface{}, p Param, err error) {
 	url := r.URL.Path
-	var path string
-	if rt.root == "/" {
-		path = url
-	} else {
+	path := url
+	matched, err := regexp.MatchString(`/api/.*`, url)
+	if matched == true {
 		path = url[len(rt.root):]
 	}
 
